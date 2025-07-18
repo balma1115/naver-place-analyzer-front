@@ -4,7 +4,11 @@ import axios from 'axios';
 import './App.css'; // 간단한 스타일링을 위해 CSS 파일 import
 
 // 백엔드 API URL 가져오기
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'https://naver-place-analyzer-production.up.railway.app';
+
+// axios 기본 설정
+axios.defaults.timeout = 120000; // 2분 타임아웃
+axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 function App() {
   const [activeTab, setActiveTab] = useState('analyze');
@@ -27,11 +31,29 @@ function App() {
     setError('');
     setResult(null);
     try {
-      const response = await axios.post(`${API_URL}/analyze-place`, { url: placeUrl });
+      console.log('분석 요청 시작:', placeUrl);
+      const response = await axios.post(`${API_URL}/analyze-place`, { 
+        url: placeUrl 
+      }, {
+        timeout: 120000, // 2분 타임아웃
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      console.log('분석 응답 받음:', response.data);
       setResult(response.data.data); // 백엔드에서 받은 결과 저장
     } catch (err) {
-      setError('분석 중 오류가 발생했습니다.');
-      console.error(err);
+      console.error('분석 에러:', err);
+      if (err.response) {
+        // 서버에서 응답이 왔지만 에러 상태인 경우
+        setError(`서버 오류: ${err.response.data?.message || err.response.statusText}`);
+      } else if (err.request) {
+        // 요청은 보냈지만 응답을 받지 못한 경우 (CORS, 네트워크 등)
+        setError('서버에 연결할 수 없습니다. CORS 설정이나 네트워크 연결을 확인해주세요.');
+      } else {
+        // 요청 자체를 보내지 못한 경우
+        setError('요청을 보낼 수 없습니다. 네트워크 연결을 확인해주세요.');
+      }
     } finally {
       setLoading(false);
     }
@@ -44,22 +66,62 @@ function App() {
     setResult(null);
     const keywordList = keywords.split(',').map(k => k.trim()); // 쉼표로 구분된 키워드를 배열로
     try {
+      console.log('키워드 순위 확인 요청 시작:', businessName, keywordList);
       const response = await axios.post(`${API_URL}/check-rankings`, {
         business_name: businessName,
         keywords: keywordList,
+      }, {
+        timeout: 120000, // 2분 타임아웃
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
+      console.log('키워드 순위 확인 응답 받음:', response.data);
       setResult(response.data.data);
     } catch (err) {
-      setError('순위 확인 중 오류가 발생했습니다.');
-      console.error(err);
+      console.error('키워드 순위 확인 에러:', err);
+      if (err.response) {
+        setError(`서버 오류: ${err.response.data?.message || err.response.statusText}`);
+      } else if (err.request) {
+        setError('서버에 연결할 수 없습니다. CORS 설정이나 네트워크 연결을 확인해주세요.');
+      } else {
+        setError('요청을 보낼 수 없습니다. 네트워크 연결을 확인해주세요.');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const testConnection = async () => {
+    try {
+      console.log('연결 테스트 시작');
+      const response = await axios.get(`${API_URL}/health`);
+      console.log('연결 테스트 성공:', response.data);
+      alert('서버 연결이 정상입니다!');
+    } catch (err) {
+      console.error('연결 테스트 실패:', err);
+      alert('서버 연결에 실패했습니다. CORS 설정을 확인해주세요.');
     }
   };
 
   return (
     <div className="container">
       <h1>미래엔영어 네이버플레이스 점검 도구</h1>
+      
+      {/* 연결 테스트 버튼 추가 */}
+      <div style={{ marginBottom: '20px' }}>
+        <button onClick={testConnection} style={{ 
+          padding: '8px 16px', 
+          backgroundColor: '#4CAF50', 
+          color: 'white', 
+          border: 'none', 
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}>
+          서버 연결 테스트
+        </button>
+      </div>
+
       <div className="tabs">
         <button onClick={() => setActiveTab('analyze')} className={activeTab === 'analyze' ? 'active' : ''}>플레이스 분석</button>
         <button onClick={() => setActiveTab('rank')} className={activeTab === 'rank' ? 'active' : ''}>키워드 순위 확인</button>
