@@ -4,6 +4,29 @@ import './App.css';
 // API URL 설정
 const API_URL = 'https://naver-place-analyzer-production.up.railway.app';
 
+// 재시도 함수
+const fetchWithRetry = async (url, options, maxRetries = 3) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) {
+        return response;
+      }
+      // 502 에러인 경우 재시도
+      if (response.status === 502 && i < maxRetries - 1) {
+        console.log(`시도 ${i + 1} 실패, 재시도 중...`);
+        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // 지수 백오프
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      console.log(`시도 ${i + 1} 실패, 재시도 중...`);
+      await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+    }
+  }
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('analyze');
   const [placeUrl, setPlaceUrl] = useState('');
@@ -19,7 +42,7 @@ function App() {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`${API_URL}/test`);
+      const response = await fetchWithRetry(`${API_URL}/test`);
       const data = await response.json();
       
       if (response.ok) {
@@ -44,7 +67,7 @@ function App() {
     setResult(null);
 
     try {
-      const response = await fetch(`${API_URL}/analyze-place`, {
+      const response = await fetchWithRetry(`${API_URL}/analyze-place`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +100,7 @@ function App() {
     const keywordList = keywords.split(',').map(k => k.trim()).filter(k => k);
 
     try {
-      const response = await fetch(`${API_URL}/check-rankings`, {
+      const response = await fetchWithRetry(`${API_URL}/check-rankings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
