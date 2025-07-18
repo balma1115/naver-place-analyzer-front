@@ -104,12 +104,24 @@ function App() {
     }
   };
 
+  const testSimpleEndpoint = async () => {
+    try {
+      console.log('간단한 테스트 시작');
+      const response = await axios.get(`${API_URL}/test`);
+      console.log('간단한 테스트 성공:', response.data);
+      alert('간단한 테스트 성공! 서버가 정상 작동 중입니다.');
+    } catch (err) {
+      console.error('간단한 테스트 실패:', err);
+      alert('간단한 테스트 실패. 서버가 응답하지 않습니다.');
+    }
+  };
+
   return (
     <div className="container">
       <h1>미래엔영어 네이버플레이스 점검 도구</h1>
       
-      {/* 연결 테스트 버튼 추가 */}
-      <div style={{ marginBottom: '20px' }}>
+      {/* 연결 테스트 버튼들 추가 */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         <button onClick={testConnection} style={{ 
           padding: '8px 16px', 
           backgroundColor: '#4CAF50', 
@@ -119,6 +131,16 @@ function App() {
           cursor: 'pointer'
         }}>
           서버 연결 테스트
+        </button>
+        <button onClick={testSimpleEndpoint} style={{ 
+          padding: '8px 16px', 
+          backgroundColor: '#2196F3', 
+          color: 'white', 
+          border: 'none', 
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}>
+          간단한 테스트
         </button>
       </div>
 
